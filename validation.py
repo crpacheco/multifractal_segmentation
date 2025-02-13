@@ -1,12 +1,13 @@
 import numpy as np
 import misc
 import data_io as dio
+import rich
 
 from sklearn.metrics import adjusted_rand_score, adjusted_mutual_info_score, confusion_matrix, cohen_kappa_score, jaccard_score, accuracy_score, balanced_accuracy_score, matthews_corrcoef, classification_report, multilabel_confusion_matrix, precision_score
 from rich.console import Console
 from rich.table import Table
 
-def report(y_true, y_pred):
+def report(y_true, y_pred, filename):
   cm = confusion_matrix(y_true, y_pred, normalize='true') * 100
   cm2 = confusion_matrix(y_true, y_pred)
   kappa_score = cohen_kappa_score(y_true, y_pred)
@@ -44,8 +45,9 @@ def report(y_true, y_pred):
   grid.add_column(justify="right")
   grid.add_row(metrics_table, subgrid)
 
-  console = Console()
+  console = Console(record=True)
   console.print(grid)
+  console.save_html(filename, theme=rich.terminal_theme.SVG_EXPORT_THEME)
 
 def reclass_data(y_pred, y_true):
   mapping = {}

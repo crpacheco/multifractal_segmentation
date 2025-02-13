@@ -19,7 +19,7 @@ def main():
     parser = argparse.ArgumentParser()
 
     parser.add_argument('sar_image', help='Input SAR data filename', type=str)
-    parser.add_argument('user_label_mask', help='Input user labeled pixeles filename', type=str)
+    parser.add_argument('user_label_mask', help='You can either enter a user-labelled pixel file name or use the word "random" to select random labelled pixels from the image and the Ground Truth band (this must be present in the SAR image)', type=str)
     parser.add_argument('output_directory', help='Output directory', type=str)
     parser.add_argument('--mfs-pixel_averaging-count', default=1, type=int, help='Number of pixels to average in sliding window to calculate MFS pixels')
     parser.add_argument('--mfs-spectrum-size', default=3, type=int, help='Length of multifractal spectrum to calculate in each instance of the sliding window')
@@ -50,13 +50,15 @@ def main():
             img_gt = src.read(2)
 
     if img_path.endswith('subset_monte_hermoso.tif'):
-        img_gt[np.nonzero(img_gt == 3)] = 4  # replace four pixels with wrong label
+        img_gt[np.nonzero(img_gt == 3)] = 4  # Change the label on four pixels to the correct one.
 
     # normalized images generation
     print('[bold italic blue]Using transforms on SAR data...')
     fimg = img.flatten().reshape(-1, 1)
     nimg = pre.MinMaxScaler().fit_transform(pre.QuantileTransformer(n_quantiles=10, random_state=0, output_distribution='uniform').fit_transform(fimg)).reshape(img.shape)
     nimg2 = pre.MinMaxScaler().fit_transform(pre.PowerTransformer().fit_transform(fimg)).reshape(img.shape)
+    dio.save_image(nimg,os.path.join(output_directory, 'NSAR1.png'))
+    dio.save_image(nimg, os.path.join(output_directory, 'NSAR2.png'))
 
     # MFS matrices calculation
     print('[bold italic blue]Calculating the multifractal spectrum...')
@@ -66,8 +68,15 @@ def main():
 
     # MFS submatrix generation from user labeled pixels
     print('[bold italic blue]Connecting the labels to the right rows of the MFS matrix....')
-    pos, targets = dio.get_user_labels(user_labeled_zones_path, mfs_img_shape)
-    subset = features_matrix[pos]
+    if user_labeled_zones_path.lower() == 'random':
+        gt = img_gt[0:nr, 0:nc].flatten()
+        sample_size = int(features_matrix.shape[0] * 0.3)
+        pos = np.random.randint(0, features_matrix.shape[0], sample_size)
+        subset = features_matrix[pos]
+        targets = gt[pos]
+    else:
+        pos, targets = dio.get_user_labels(user_labeled_zones_path, mfs_img_shape)
+        subset = features_matrix[pos]
 
     # SOM training
     print('[bold italic blue]Training AI model...')
@@ -86,7 +95,8 @@ def main():
         j = subset_winner_coordinates[1, k]
         p = tlabels.index(targets[k])
         M[p, i, j] += 1
-    n_gt = np.argmax(M, axis=0)
+    bml = np.argmax(M, axis=0)
+    dio.save_true_image(bml, os.path.join(output_directory, 'BML.png'))
 
     # segmented image generation
     print('[bold italic blue]Doing segmentation...')
@@ -95,20 +105,21 @@ def main():
     for k in range(winner_coordinates[0].size):
         i = winner_coordinates[0, k]
         j = winner_coordinates[1, k]
-        labeled[k] = n_gt[i, j]
+        labeled[k] = bml[i, j]
+    data_io.save_raster(labeled.reshape(mfs_img_shape), os.path.join(output_directory, 'predicted.tif'), img_path)
 
     # applying majority filter
     print('[bold italic blue]Applying majority filter...')
     window_size = (15, 15)
     mj_img = generic_filter(labeled.reshape(mfs_img_shape), function=misc.majority, size=window_size)
-    data_io.save_raster(mj_img, os.path.join(output_directory, 'mfs_mjc.tif'), img_path)
+    data_io.save_raster(mj_img, os.path.join(output_directory, 'final.tif'), img_path)
 
     if validate:
         print('[bold italic blue]Validating...')
         y_pred = mj_img.flatten()
         y_true = img_gt[0:nr, 0:nc].flatten()
         validation.reclass_data(y_pred, y_true)
-        validation.report(y_true, y_pred)
+        validation.report(y_true, y_pred, os.path.join(output_directory, 'report.html'))
 
     return 0
 

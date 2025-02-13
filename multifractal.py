@@ -133,35 +133,3 @@ def calculate_multifractal_spectrum(img, spectrum_size, averaging, iterations, s
   for j in range(pixels_count):
       spectra[j] = calculate_box_counting(windows[j], iterations, spectrum_size)
   return (center, spectra, (nr, nc))
-
-def calculate_multifractal_spectrum_triplet(img, spectrum_size, averaging, iterations, sliding_window_size=None):
-  # compute intensity
-  image_show(img)
-  intensity_alphas, intensity_spectra, intensity_shape = calculate_multifractal_spectrum(img, spectrum_size, averaging, iterations, sliding_window_size)
-
-  # compute gradient
-  fx = 0.5 * np.array([-1, 0, 1]).reshape(-1, 1)
-  fy = fx.T
-  fxy = 0.5 * np.array([[-1, 0, 0],[0, 0, 0],[0, 0, 1]])
-  fyx = 0.5 * np.array([[0, 0, -1],[0, 0, 0],[1, 0, 0]])
-
-  img_gradient = img.astype(float)
-  img_gradient = np.power(scipy.signal.convolve2d(img_gradient, fx, mode="same"), 2) + np.power(scipy.signal.convolve2d(img_gradient, fy, mode="same"), 2) + np.power(scipy.signal.convolve2d(img_gradient, fxy, mode="same"), 2) + np.power(scipy.signal.convolve2d(img_gradient, fyx, mode="same"), 2)
-  img_gradient = misc.normalize_data(np.sqrt(img_gradient))
-
-  image_show(img_gradient)
-  gradient_alphas, gradient_spectra, gradient_shape = calculate_multifractal_spectrum(img_gradient, spectrum_size, averaging, iterations, sliding_window_size)
-
-  # compute laplacian
-  f1 = get_kernel(5,1)
-  f2 = np.array([[-1, -1, -1],[-1, 8, -1],[-1, -1, -1]])
-  f = scipy.signal.convolve2d(f1, f2)
-
-  img_laplacian = img.astype(float)
-  img_laplacian = scipy.signal.convolve2d(img_laplacian, f, mode="same")
-  img_laplacian = img_laplacian = misc.normalize_data(img_laplacian)
-
-  image_show(img_laplacian)
-  laplacian_alphas, laplacian_spectra, laplacian_shape = calculate_multifractal_spectrum(img_laplacian, spectrum_size, averaging, iterations, sliding_window_size)
-
-  return np.vstack([intensity_alphas, gradient_alphas, laplacian_alphas]), np.hstack([intensity_spectra, gradient_spectra, laplacian_spectra]), laplacian_shape
