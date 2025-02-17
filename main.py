@@ -1,6 +1,5 @@
 import argparse
 import os
-
 import rasterio
 import numpy as np
 
@@ -50,7 +49,7 @@ def main():
             img_gt = src.read(2)
 
     if img_path.endswith('subset_monte_hermoso.tif'):
-        img_gt[np.nonzero(img_gt == 3)] = 4  # Change the label on four pixels to the correct one.
+        img_gt[np.nonzero(img_gt == 3)] = 4  # Change the label on four pixels to match the right one.
 
     # normalized images generation
     print('[bold italic blue]Using transforms on SAR data...')
@@ -58,12 +57,13 @@ def main():
     nimg = pre.MinMaxScaler().fit_transform(pre.QuantileTransformer(n_quantiles=10, random_state=0, output_distribution='uniform').fit_transform(fimg)).reshape(img.shape)
     nimg2 = pre.MinMaxScaler().fit_transform(pre.PowerTransformer().fit_transform(fimg)).reshape(img.shape)
     dio.save_image(nimg,os.path.join(output_directory, 'NSAR1.png'))
-    dio.save_image(nimg, os.path.join(output_directory, 'NSAR2.png'))
+    dio.save_image(nimg2, os.path.join(output_directory, 'NSAR2.png'))
 
     # MFS matrices calculation
     print('[bold italic blue]Calculating the multifractal spectrum...')
     alphas, features_matrix, mfs_img_shape = mfr.calculate_multifractal_spectrum(nimg, spectrum_size, pixel_averaging_count, iterations, win_shape)
-    alphas2, features_matrix2, _ = mfr.calculate_multifractal_spectrum(nimg2, spectrum_size, pixel_averaging_count, iterations, win_shape)
+    _, features_matrix2, _ = mfr.calculate_multifractal_spectrum(nimg2, spectrum_size, pixel_averaging_count, iterations, win_shape)
+    features_matrix = np.concatenate((features_matrix, features_matrix2), axis=1)
     nr, nc = mfs_img_shape
 
     # MFS submatrix generation from user labeled pixels
@@ -82,7 +82,7 @@ def main():
     print('[bold italic blue]Training AI model...')
     m, n = 10, 10
     dim = subset.shape[1]
-    som = MiniSom(m, n, dim, sigma=0.5, learning_rate=0.5, neighborhood_function='gaussian', activation_distance='euclidean', random_seed=10)  # initialization of 6x6 SOM
+    som = MiniSom(m, n, dim, sigma=0.5, learning_rate=0.5, neighborhood_function='gaussian', activation_distance='euclidean', random_seed=10)  # initialization of 10x10 SOM
     som.train_batch(subset, 100000)  # trains the SOM with 100000 iterations
 
     # BML generation
