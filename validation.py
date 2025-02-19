@@ -7,9 +7,9 @@ from sklearn.metrics import adjusted_rand_score, adjusted_mutual_info_score, con
 from rich.console import Console
 from rich.table import Table
 
-def report(y_true, y_pred, filename):
-  cm = confusion_matrix(y_true, y_pred, normalize='true') * 100
-  cm2 = confusion_matrix(y_true, y_pred)
+def report(y_true, y_pred, labels, filename):
+  cm = confusion_matrix(y_true, y_pred, normalize='true', labels=labels) * 100
+  cm2 = confusion_matrix(y_true, y_pred, labels=labels)
   kappa_score = cohen_kappa_score(y_true, y_pred)
   rand_score = adjusted_rand_score(y_true, y_pred)
   mutual_score = adjusted_mutual_info_score(y_true, y_pred)
@@ -32,8 +32,8 @@ def report(y_true, y_pred, filename):
   metrics_table.add_row("Matthews Correlation", "{:.2f}".format(matthews_coef))
   metrics_table.add_row("Precision", "{:.2f}".format(precision))
 
-  cm_table = dio.array_to_table(cm)
-  cm2_table = dio.array_to_table(cm2)
+  cm_table = dio.array_to_table(cm, labels, "Confusion Matrix (%)")
+  cm2_table = dio.array_to_table(cm2, labels, "Confusion Matrix")
 
   subgrid = Table.grid(expand=True)
   subgrid.add_column()

@@ -88,7 +88,7 @@ def main():
     # BML generation
     print('[bold italic blue]Building BMU-label map...')
     subset_winner_coordinates = np.array([som.winner(x) for x in subset]).T
-    tlabels = np.unique(targets).tolist()
+    tlabels = np.unique(targets).astype(int).tolist()
     M = np.zeros((len(tlabels), m, n), dtype=int)
     for k in range(subset_winner_coordinates[0].size):
         i = subset_winner_coordinates[0, k]
@@ -119,7 +119,7 @@ def main():
         y_pred = mj_img.flatten()
         y_true = img_gt[0:nr, 0:nc].flatten()
         validation.reclass_data(y_pred, y_true)
-        validation.report(y_true, y_pred, os.path.join(output_directory, 'report.html'))
+        validation.report(y_true, y_pred, tlabels, os.path.join(output_directory, 'report.html'))
 
     return 0
 

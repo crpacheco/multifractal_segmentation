@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import rasterio
+import pandas as pd
 from rich.table import Table
 
 def save_true_image(arr, filename):
@@ -42,14 +43,8 @@ def get_user_labels(user_labeled_zones_path, mfs_img_shape):
 
     return (pos, targets)
 
-def array_to_table(arr):
-  table = Table(show_header = False, show_lines=True)
-  r, c = arr.shape
-  for j in range(c):
-    table.add_column('', justify='center')
-
-  conv = lambda v: "{:.2f}".format(v)
-  for i in range(r):
-    table.add_row(*list(map(conv, arr[i])))
-
+def array_to_table(arr, labels=None, title=None):
+  df = pd.DataFrame(arr, columns = labels, index = labels)
+  table = Table(title=title, show_header = False, show_lines=True)
+  table.add_row(df.to_string(float_format=lambda _: '{:.2f}'.format(_)))
   return table
