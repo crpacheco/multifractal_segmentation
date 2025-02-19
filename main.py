@@ -2,8 +2,8 @@ import argparse
 import os
 import rasterio
 import numpy as np
+import warnings
 
-import data_io
 import multifractal as mfr
 import data_io as dio
 import misc
@@ -106,13 +106,13 @@ def main():
         i = winner_coordinates[0, k]
         j = winner_coordinates[1, k]
         labeled[k] = bml[i, j]
-    data_io.save_raster(labeled.reshape(mfs_img_shape), os.path.join(output_directory, 'predicted.tif'), img_path)
+    dio.save_raster(labeled.reshape(mfs_img_shape), os.path.join(output_directory, 'predicted.tif'), img_path)
 
     # applying majority filter
     print('[bold italic blue]Applying majority filter...')
     window_size = (15, 15)
     mj_img = generic_filter(labeled.reshape(mfs_img_shape), function=misc.majority, size=window_size)
-    data_io.save_raster(mj_img, os.path.join(output_directory, 'final.tif'), img_path)
+    dio.save_raster(mj_img, os.path.join(output_directory, 'final.tif'), img_path)
 
     if validate:
         print('[bold italic blue]Validating...')
@@ -125,4 +125,5 @@ def main():
 
 
 if __name__ == '__main__':
+    warnings.filterwarnings("ignore", category=rasterio.errors.NotGeoreferencedWarning)
     main()
